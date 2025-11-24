@@ -6,7 +6,7 @@ describe('Box Revoke Session Script', () => {
       ENVIRONMENT: 'test'
     },
     secrets: {
-      BOX_TOKEN: 'Bearer test-box-token-123456'
+      BEARER_AUTH_TOKEN: 'Bearer test-box-token-123456'
     },
     outputs: {}
   };
@@ -46,7 +46,7 @@ describe('Box Revoke Session Script', () => {
         .rejects.toThrow('Invalid email format for userLogin');
     });
 
-    test('should throw error for missing BOX_TOKEN', async () => {
+    test('should throw error for missing BEARER_AUTH_TOKEN', async () => {
       const params = {
         userId: '12345',
         userLogin: 'user@example.com'
@@ -58,7 +58,7 @@ describe('Box Revoke Session Script', () => {
       };
 
       await expect(script.invoke(params, contextWithoutToken))
-        .rejects.toThrow('Missing required secret: BOX_TOKEN');
+        .rejects.toThrow('Missing required secret: BEARER_AUTH_TOKEN');
     });
 
     test('should validate empty userId', async () => {

@@ -86,13 +86,13 @@ export default {
 
       console.log(`Processing user ID: ${userId}, login: ${userLogin}`);
 
-      if (!context.secrets?.BOX_TOKEN) {
-        throw new FatalError('Missing required secret: BOX_TOKEN');
+      if (!context.secrets?.BEARER_AUTH_TOKEN) {
+        throw new FatalError('Missing required secret: BEARER_AUTH_TOKEN');
       }
 
       // Terminate all sessions for the user
       console.log(`Terminating sessions for user: ${userId}`);
-      const terminateResult = await terminateSessions(userId, userLogin, context.secrets.BOX_TOKEN);
+      const terminateResult = await terminateSessions(userId, userLogin, context.secrets.BEARER_AUTH_TOKEN);
 
       const result = {
         userId,
