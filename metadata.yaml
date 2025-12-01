@@ -19,6 +19,14 @@ inputs:
       min: 1
       max: 254
 
+  address:
+    type: text
+    description: Box API base URL (defaults to https://api.box.com if not provided)
+    required: false
+    validation:
+      min: 1
+      max: 255
+
 # Expected output structure
 outputs:
   userId:

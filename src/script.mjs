@@ -1,3 +1,5 @@
+import { getAuthorizationHeader, getBaseUrl } from '@sgnl-actions/utils';
+
 class RetryableError extends Error {
   constructor(message) {
     super(message);
@@ -28,8 +30,8 @@ function validateInputs(params) {
   }
 }
 
-async function terminateSessions(userId, userLogin, token) {
-  const url = 'https://api.box.com/2.0/users/terminate_sessions';
+async function terminateSessions(userId, userLogin, baseUrl, authHeader) {
+  const url = `${baseUrl}/2.0/users/terminate_sessions`;
 
   const requestBody = {
     user_ids: [userId],
@@ -39,7 +41,7 @@ async function terminateSessions(userId, userLogin, token) {
   const response = await fetch(url, {
     method: 'POST',
     headers: {
-      'Authorization': token.startsWith('Bearer ') ? token : `Bearer ${token}`,
+      'Authorization': authHeader,
       'Content-Type': 'application/json'
     },
     body: JSON.stringify(requestBody)
@@ -76,6 +78,19 @@ async function terminateSessions(userId, userLogin, token) {
 }
 
 export default {
+  /**
+   * Main execution handler - terminates all active sessions for a Box user
+   * @param {Object} params - Job input parameters
+   * @param {string} params.userId - The Box user ID whose sessions should be terminated
+   * @param {string} params.userLogin - The Box user email/login whose sessions should be terminated
+   * @param {string} params.address - Full URL to Box API (defaults to https://api.box.com if not provided)
+   *
+   * @param {Object} context - Execution context with secrets and environment
+   * @param {string} context.secrets.BEARER_AUTH_TOKEN - Bearer token for Box API authentication
+   * @param {string} context.environment.ADDRESS - Default Box API base URL
+   *
+   * @returns {Object} Job results
+   */
   invoke: async (params, context) => {
     console.log('Starting Box Revoke Session action');
 
@@ -90,9 +105,22 @@ export default {
         throw new FatalError('Missing required secret: BEARER_AUTH_TOKEN');
       }
 
+      // Get base URL using utils (with default for Box API)
+      // If no address is provided via params or environment, use default Box API URL
+      let baseUrl;
+      try {
+        baseUrl = getBaseUrl(params, context);
+      } catch (error) {
+        // Default to standard Box API URL if not provided
+        baseUrl = 'https://api.box.com';
+      }
+
+      // Get authorization header using utils
+      const authHeader = await getAuthorizationHeader(context);
+
       // Terminate all sessions for the user
       console.log(`Terminating sessions for user: ${userId}`);
-      const terminateResult = await terminateSessions(userId, userLogin, context.secrets.BEARER_AUTH_TOKEN);
+      const terminateResult = await terminateSessions(userId, userLogin, baseUrl, authHeader);
 
       const result = {
         userId,
@@ -116,6 +144,14 @@ export default {
     }
   },
 
+  /**
+   * Error recovery handler - handles errors during session termination
+   *
+   * @param {Object} params - Original params plus error information
+   * @param {Object} context - Execution context
+   *
+   * @returns {Object} Recovery results
+   */
   error: async (params, _context) => {
     const { error } = params;
     console.error(`Error handler invoked: ${error?.message}`);
@@ -124,6 +160,14 @@ export default {
     throw error;
   },
 
+  /**
+   * Halt handler - handles graceful shutdown
+   *
+   * @param {Object} params - Halt parameters including reason
+   * @param {Object} context - Execution context
+   *
+   * @returns {Object} Halt results
+   */
   halt: async (params, _context) => {
     const { reason, userId, userLogin } = params;
     console.log(`Job is being halted (${reason})`);

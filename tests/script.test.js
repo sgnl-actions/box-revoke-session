@@ -81,8 +81,73 @@ describe('Box Revoke Session Script', () => {
         .rejects.toThrow('Invalid or missing userLogin parameter');
     });
 
-    // Note: Testing actual Box API calls would require mocking fetch
-    // or integration tests with real Box credentials
+    test('should use default Box API URL when address not provided', async () => {
+      const params = {
+        userId: '12345',
+        userLogin: 'user@example.com'
+      };
+
+      let capturedUrl;
+      global.fetch = async (url, options) => {
+        capturedUrl = url;
+        return {
+          ok: true,
+          json: async () => ({ message: 'Success' })
+        };
+      };
+
+      await script.invoke(params, mockContext);
+
+      expect(capturedUrl).toBe('https://api.box.com/2.0/users/terminate_sessions');
+    });
+
+    test('should use address parameter when provided', async () => {
+      const params = {
+        userId: '12345',
+        userLogin: 'user@example.com',
+        address: 'https://custom.box.com'
+      };
+
+      let capturedUrl;
+      global.fetch = async (url, options) => {
+        capturedUrl = url;
+        return {
+          ok: true,
+          json: async () => ({ message: 'Success' })
+        };
+      };
+
+      await script.invoke(params, mockContext);
+
+      expect(capturedUrl).toBe('https://custom.box.com/2.0/users/terminate_sessions');
+    });
+
+    test('should use ADDRESS environment variable when address param not provided', async () => {
+      const params = {
+        userId: '12345',
+        userLogin: 'user@example.com'
+      };
+
+      const contextWithEnvAddress = {
+        ...mockContext,
+        environment: {
+          ADDRESS: 'https://env.box.com'
+        }
+      };
+
+      let capturedUrl;
+      global.fetch = async (url, options) => {
+        capturedUrl = url;
+        return {
+          ok: true,
+          json: async () => ({ message: 'Success' })
+        };
+      };
+
+      await script.invoke(params, contextWithEnvAddress);
+
+      expect(capturedUrl).toBe('https://env.box.com/2.0/users/terminate_sessions');
+    });
   });
 
   describe('error handler', () => {
