@@ -209,14 +209,6 @@ This action uses the following Box API endpoint:
    - Ensure the userLogin parameter is a valid email address
    - Example: `user@example.com`
 
-## Version History
-
-### v1.0.0
-- Initial release
-- Support for session termination via Box API
-- Comprehensive error handling and validation
-- Integration with @sgnl-actions/utils package
-
 ## License
 
 MIT
