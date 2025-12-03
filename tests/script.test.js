@@ -2,8 +2,8 @@ import script from '../src/script.mjs';
 
 describe('Box Revoke Session Script', () => {
   const mockContext = {
-    env: {
-      ENVIRONMENT: 'test'
+    environment: {
+      ADDRESS: 'https://api.box.com'
     },
     secrets: {
       BEARER_AUTH_TOKEN: 'Bearer test-box-token-123456'
