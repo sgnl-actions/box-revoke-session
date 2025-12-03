@@ -238,15 +238,29 @@ var script = {
   /**
    * Main execution handler - terminates all active sessions for a Box user
    * @param {Object} params - Job input parameters
-   * @param {string} params.userId - The Box user ID whose sessions should be terminated
-   * @param {string} params.userLogin - The Box user email/login whose sessions should be terminated
-   * @param {string} params.address - Full URL to Box API (defaults to https://api.box.com if not provided)
+   * @param {string} params.userId - The Box user ID whose sessions should be terminated (required)
+   * @param {string} params.userLogin - The Box user email/login whose sessions should be terminated (required)
+   * @param {string} params.address - Optional Box API base URL
    *
    * @param {Object} context - Execution context with secrets and environment
-   * @param {string} context.secrets.BEARER_AUTH_TOKEN - Bearer token for Box API authentication
-   * @param {string} context.environment.ADDRESS - Default Box API base URL
+   * @param {string} context.environment.ADDRESS - Box API base URL
    *
-   * @returns {Object} Job results
+   * The configured auth type will determine which of the following environment variables and secrets are available
+   * @param {string} context.secrets.BEARER_AUTH_TOKEN
+   *
+   * @param {string} context.secrets.BASIC_USERNAME
+   * @param {string} context.secrets.BASIC_PASSWORD
+   *
+   * @param {string} context.secrets.OAUTH2_CLIENT_CREDENTIALS_CLIENT_SECRET
+   * @param {string} context.environment.OAUTH2_CLIENT_CREDENTIALS_AUDIENCE
+   * @param {string} context.environment.OAUTH2_CLIENT_CREDENTIALS_AUTH_STYLE
+   * @param {string} context.environment.OAUTH2_CLIENT_CREDENTIALS_CLIENT_ID
+   * @param {string} context.environment.OAUTH2_CLIENT_CREDENTIALS_SCOPE
+   * @param {string} context.environment.OAUTH2_CLIENT_CREDENTIALS_TOKEN_URL
+   *
+   * @param {string} context.secrets.OAUTH2_AUTHORIZATION_CODE_ACCESS_TOKEN
+   *
+   * @returns {Promise<Object>} Action result
    */
   invoke: async (params, context) => {
     console.log('Starting Box Revoke Session action');
@@ -258,19 +272,8 @@ var script = {
 
       console.log(`Processing user ID: ${userId}, login: ${userLogin}`);
 
-      if (!context.secrets?.BEARER_AUTH_TOKEN) {
-        throw new FatalError('Missing required secret: BEARER_AUTH_TOKEN');
-      }
-
-      // Get base URL using utils (with default for Box API)
-      // If no address is provided via params or environment, use default Box API URL
-      let baseUrl;
-      try {
-        baseUrl = getBaseUrl(params, context);
-      } catch (error) {
-        // Default to standard Box API URL if not provided
-        baseUrl = 'https://api.box.com';
-      }
+      // Get base URL using utils (params.address or context.environment.ADDRESS)
+      const baseUrl = getBaseUrl(params, context);
 
       // Get authorization header using utils
       const authHeader = await getAuthorizationHeader(context);

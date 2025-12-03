@@ -8,21 +8,11 @@ This SGNL action integrates with Box's REST API to immediately terminate all act
 
 ## Prerequisites
 
-- Box API Bearer Token with appropriate permissions
+- Box API authentication (Bearer Token, Basic Auth, OAuth2, etc.)
 - Target user's Box user ID
 - Target user's Box login email
 
 ## Configuration
-
-### Required Secrets
-
-- `BEARER_AUTH_TOKEN` - Your Box API Bearer token
-
-### Optional Environment Variables
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `ADDRESS` | `https://api.box.com` | Box API base URL (can also be provided via `address` parameter) |
 
 ### Input Parameters
 
@@ -30,7 +20,35 @@ This SGNL action integrates with Box's REST API to immediately terminate all act
 |-----------|------|----------|-------------|---------|
 | `userId` | string | Yes | The Box user ID whose sessions should be terminated | `12345678` |
 | `userLogin` | string | Yes | The Box user email/login whose sessions should be terminated | `user@example.com` |
-| `address` | string | No | Box API base URL (defaults to `https://api.box.com`) | `https://api.box.com` |
+| `address` | string | No | Box API base URL (e.g., https://api.box.com) | `https://api.box.com` |
+
+### Environment Variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `ADDRESS` | `https://api.box.com` | Box API base URL (can also be provided via `address` parameter) |
+
+### Authentication
+
+This action supports multiple authentication methods. Configure the appropriate secrets and environment variables based on your chosen authentication method:
+
+#### Bearer Token Authentication
+- `BEARER_AUTH_TOKEN` (secret) - Your Box API Bearer token
+
+#### Basic Authentication
+- `BASIC_USERNAME` (secret) - Your Box API username
+- `BASIC_PASSWORD` (secret) - Your Box API password
+
+#### OAuth2 Client Credentials
+- `OAUTH2_CLIENT_CREDENTIALS_CLIENT_SECRET` (secret) - OAuth2 client secret
+- `OAUTH2_CLIENT_CREDENTIALS_CLIENT_ID` (environment) - OAuth2 client ID
+- `OAUTH2_CLIENT_CREDENTIALS_TOKEN_URL` (environment) - OAuth2 token endpoint URL
+- `OAUTH2_CLIENT_CREDENTIALS_SCOPE` (environment) - OAuth2 scopes (optional)
+- `OAUTH2_CLIENT_CREDENTIALS_AUDIENCE` (environment) - OAuth2 audience (optional)
+- `OAUTH2_CLIENT_CREDENTIALS_AUTH_STYLE` (environment) - OAuth2 auth style (optional)
+
+#### OAuth2 Authorization Code
+- `OAUTH2_AUTHORIZATION_CODE_ACCESS_TOKEN` (secret) - OAuth2 access token
 
 ### Output Structure
 
@@ -44,7 +62,7 @@ This SGNL action integrates with Box's REST API to immediately terminate all act
 
 ## Usage Example
 
-### Job Request
+### Job Request (Bearer Token)
 
 ```json
 {
@@ -61,7 +79,37 @@ This SGNL action integrates with Box's REST API to immediately terminate all act
     "address": "https://api.box.com"
   },
   "environment": {
-    "LOG_LEVEL": "info"
+    "ADDRESS": "https://api.box.com"
+  },
+  "secrets": {
+    "BEARER_AUTH_TOKEN": "your-box-api-token"
+  }
+}
+```
+
+### Job Request (OAuth2 Client Credentials)
+
+```json
+{
+  "id": "revoke-session-002",
+  "type": "nodejs-22",
+  "script": {
+    "repository": "github.com/sgnl-actions/box-revoke-session",
+    "version": "v1.0.0",
+    "type": "nodejs"
+  },
+  "script_inputs": {
+    "userId": "12345678",
+    "userLogin": "user@example.com"
+  },
+  "environment": {
+    "ADDRESS": "https://api.box.com",
+    "OAUTH2_CLIENT_CREDENTIALS_CLIENT_ID": "your-client-id",
+    "OAUTH2_CLIENT_CREDENTIALS_TOKEN_URL": "https://api.box.com/oauth2/token",
+    "OAUTH2_CLIENT_CREDENTIALS_SCOPE": "manage_enterprise"
+  },
+  "secrets": {
+    "OAUTH2_CLIENT_CREDENTIALS_CLIENT_SECRET": "your-client-secret"
   }
 }
 ```
@@ -145,8 +193,9 @@ This action uses the following Box API endpoint:
 
 ### Common Issues
 
-1. **"Missing required secret: BEARER_AUTH_TOKEN"**
-   - Ensure the `BEARER_AUTH_TOKEN` secret is configured in your SGNL environment
+1. **"Authentication required"**
+   - Ensure you have configured one of the supported authentication methods
+   - Verify the authentication credentials are valid and not expired
 
 2. **"User not found"**
    - Verify the user ID exists in your Box organization

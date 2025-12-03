@@ -46,21 +46,6 @@ describe('Box Revoke Session Script', () => {
         .rejects.toThrow('Invalid email format for userLogin');
     });
 
-    test('should throw error for missing BEARER_AUTH_TOKEN', async () => {
-      const params = {
-        userId: '12345',
-        userLogin: 'user@example.com'
-      };
-
-      const contextWithoutToken = {
-        ...mockContext,
-        secrets: {}
-      };
-
-      await expect(script.invoke(params, contextWithoutToken))
-        .rejects.toThrow('Missing required secret: BEARER_AUTH_TOKEN');
-    });
-
     test('should validate empty userId', async () => {
       const params = {
         userId: '   ',
@@ -81,24 +66,19 @@ describe('Box Revoke Session Script', () => {
         .rejects.toThrow('Invalid or missing userLogin parameter');
     });
 
-    test('should use default Box API URL when address not provided', async () => {
+    test('should require ADDRESS when address parameter not provided', async () => {
       const params = {
         userId: '12345',
         userLogin: 'user@example.com'
       };
 
-      let capturedUrl;
-      global.fetch = async (url, options) => {
-        capturedUrl = url;
-        return {
-          ok: true,
-          json: async () => ({ message: 'Success' })
-        };
+      const contextWithoutAddress = {
+        ...mockContext,
+        environment: {}
       };
 
-      await script.invoke(params, mockContext);
-
-      expect(capturedUrl).toBe('https://api.box.com/2.0/users/terminate_sessions');
+      await expect(script.invoke(params, contextWithoutAddress))
+        .rejects.toThrow('No URL specified');
     });
 
     test('should use address parameter when provided', async () => {
