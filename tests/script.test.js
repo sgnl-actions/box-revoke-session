@@ -2,11 +2,11 @@ import script from '../src/script.mjs';
 
 describe('Box Revoke Session Script', () => {
   const mockContext = {
-    env: {
-      ENVIRONMENT: 'test'
+    environment: {
+      ADDRESS: 'https://api.box.com'
     },
     secrets: {
-      BOX_TOKEN: 'Bearer test-box-token-123456'
+      BEARER_AUTH_TOKEN: 'Bearer test-box-token-123456'
     },
     outputs: {}
   };
@@ -46,21 +46,6 @@ describe('Box Revoke Session Script', () => {
         .rejects.toThrow('Invalid email format for userLogin');
     });
 
-    test('should throw error for missing BOX_TOKEN', async () => {
-      const params = {
-        userId: '12345',
-        userLogin: 'user@example.com'
-      };
-
-      const contextWithoutToken = {
-        ...mockContext,
-        secrets: {}
-      };
-
-      await expect(script.invoke(params, contextWithoutToken))
-        .rejects.toThrow('Missing required secret: BOX_TOKEN');
-    });
-
     test('should validate empty userId', async () => {
       const params = {
         userId: '   ',
@@ -81,8 +66,68 @@ describe('Box Revoke Session Script', () => {
         .rejects.toThrow('Invalid or missing userLogin parameter');
     });
 
-    // Note: Testing actual Box API calls would require mocking fetch
-    // or integration tests with real Box credentials
+    test('should require ADDRESS when address parameter not provided', async () => {
+      const params = {
+        userId: '12345',
+        userLogin: 'user@example.com'
+      };
+
+      const contextWithoutAddress = {
+        ...mockContext,
+        environment: {}
+      };
+
+      await expect(script.invoke(params, contextWithoutAddress))
+        .rejects.toThrow('No URL specified');
+    });
+
+    test('should use address parameter when provided', async () => {
+      const params = {
+        userId: '12345',
+        userLogin: 'user@example.com',
+        address: 'https://custom.box.com'
+      };
+
+      let capturedUrl;
+      global.fetch = async (url, options) => {
+        capturedUrl = url;
+        return {
+          ok: true,
+          json: async () => ({ message: 'Success' })
+        };
+      };
+
+      await script.invoke(params, mockContext);
+
+      expect(capturedUrl).toBe('https://custom.box.com/2.0/users/terminate_sessions');
+    });
+
+    test('should use ADDRESS environment variable when address param not provided', async () => {
+      const params = {
+        userId: '12345',
+        userLogin: 'user@example.com'
+      };
+
+      const contextWithEnvAddress = {
+        ...mockContext,
+        environment: {
+          ADDRESS: 'https://env.box.com'
+        }
+      };
+
+      let capturedUrl;
+      global.fetch = async (url, options) => {
+        capturedUrl = url;
+        return {
+          ok: true,
+          json: async () => ({ message: 'Success' })
+        };
+      };
+
+      await script.invoke(params, contextWithEnvAddress);
+
+      expect(capturedUrl).toBe('https://env.box.com/2.0/users/terminate_sessions');
+    });
   });
 
   describe('error handler', () => {

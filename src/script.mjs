@@ -1,3 +1,5 @@
+import { getAuthorizationHeader, getBaseUrl } from '@sgnl-actions/utils';
+
 class RetryableError extends Error {
   constructor(message) {
     super(message);
@@ -28,8 +30,8 @@ function validateInputs(params) {
   }
 }
 
-async function terminateSessions(userId, userLogin, token) {
-  const url = 'https://api.box.com/2.0/users/terminate_sessions';
+async function terminateSessions(userId, userLogin, baseUrl, authHeader) {
+  const url = `${baseUrl}/2.0/users/terminate_sessions`;
 
   const requestBody = {
     user_ids: [userId],
@@ -39,7 +41,7 @@ async function terminateSessions(userId, userLogin, token) {
   const response = await fetch(url, {
     method: 'POST',
     headers: {
-      'Authorization': token.startsWith('Bearer ') ? token : `Bearer ${token}`,
+      'Authorization': authHeader,
       'Content-Type': 'application/json'
     },
     body: JSON.stringify(requestBody)
@@ -76,6 +78,33 @@ async function terminateSessions(userId, userLogin, token) {
 }
 
 export default {
+  /**
+   * Main execution handler - terminates all active sessions for a Box user
+   * @param {Object} params - Job input parameters
+   * @param {string} params.userId - The Box user ID whose sessions should be terminated (required)
+   * @param {string} params.userLogin - The Box user email/login whose sessions should be terminated (required)
+   * @param {string} params.address - Optional Box API base URL
+   *
+   * @param {Object} context - Execution context with secrets and environment
+   * @param {string} context.environment.ADDRESS - Box API base URL
+   *
+   * The configured auth type will determine which of the following environment variables and secrets are available
+   * @param {string} context.secrets.BEARER_AUTH_TOKEN
+   *
+   * @param {string} context.secrets.BASIC_USERNAME
+   * @param {string} context.secrets.BASIC_PASSWORD
+   *
+   * @param {string} context.secrets.OAUTH2_CLIENT_CREDENTIALS_CLIENT_SECRET
+   * @param {string} context.environment.OAUTH2_CLIENT_CREDENTIALS_AUDIENCE
+   * @param {string} context.environment.OAUTH2_CLIENT_CREDENTIALS_AUTH_STYLE
+   * @param {string} context.environment.OAUTH2_CLIENT_CREDENTIALS_CLIENT_ID
+   * @param {string} context.environment.OAUTH2_CLIENT_CREDENTIALS_SCOPE
+   * @param {string} context.environment.OAUTH2_CLIENT_CREDENTIALS_TOKEN_URL
+   *
+   * @param {string} context.secrets.OAUTH2_AUTHORIZATION_CODE_ACCESS_TOKEN
+   *
+   * @returns {Promise<Object>} Action result
+   */
   invoke: async (params, context) => {
     console.log('Starting Box Revoke Session action');
 
@@ -86,13 +115,15 @@ export default {
 
       console.log(`Processing user ID: ${userId}, login: ${userLogin}`);
 
-      if (!context.secrets?.BOX_TOKEN) {
-        throw new FatalError('Missing required secret: BOX_TOKEN');
-      }
+      // Get base URL using utils (params.address or context.environment.ADDRESS)
+      const baseUrl = getBaseUrl(params, context);
+
+      // Get authorization header using utils
+      const authHeader = await getAuthorizationHeader(context);
 
       // Terminate all sessions for the user
       console.log(`Terminating sessions for user: ${userId}`);
-      const terminateResult = await terminateSessions(userId, userLogin, context.secrets.BOX_TOKEN);
+      const terminateResult = await terminateSessions(userId, userLogin, baseUrl, authHeader);
 
       const result = {
         userId,
@@ -116,6 +147,14 @@ export default {
     }
   },
 
+  /**
+   * Error recovery handler - handles errors during session termination
+   *
+   * @param {Object} params - Original params plus error information
+   * @param {Object} context - Execution context
+   *
+   * @returns {Object} Recovery results
+   */
   error: async (params, _context) => {
     const { error } = params;
     console.error(`Error handler invoked: ${error?.message}`);
@@ -124,6 +163,14 @@ export default {
     throw error;
   },
 
+  /**
+   * Halt handler - handles graceful shutdown
+   *
+   * @param {Object} params - Halt parameters including reason
+   * @param {Object} context - Execution context
+   *
+   * @returns {Object} Halt results
+   */
   halt: async (params, _context) => {
     const { reason, userId, userLogin } = params;
     console.log(`Job is being halted (${reason})`);
