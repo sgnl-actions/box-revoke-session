@@ -1,4 +1,4 @@
-import { getAuthorizationHeader, getBaseURL, resolveJSONPathTemplates} from '@sgnl-actions/utils';
+import { getAuthorizationHeader, getBaseURL} from '@sgnl-actions/utils';
 
 class RetryableError extends Error {
   constructor(message) {
@@ -108,23 +108,15 @@ export default {
   invoke: async (params, context) => {
     console.log('Starting Box Revoke Session action');
 
-    const jobContext = context.data || {};
-
-    // Resolve JSONPath templates in params
-    const { result: resolvedParams, errors } = resolveJSONPathTemplates(params, jobContext);
-    if (errors.length > 0) {
-     console.warn('Template resolution errors:', errors);
-    }
-
     try {
-      validateInputs(resolvedParams);
+      validateInputs(params);
 
-      const { userId, userLogin } = resolvedParams;
+      const { userId, userLogin } = params;
 
       console.log(`Processing user ID: ${userId}, login: ${userLogin}`);
 
       // Get base URL using utils (params.address or context.environment.ADDRESS)
-      const baseUrl = getBaseURL(resolvedParams, context);
+      const baseUrl = getBaseURL(params, context);
 
       // Get authorization header using utils
       const authHeader = await getAuthorizationHeader(context);
