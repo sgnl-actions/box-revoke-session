@@ -1,4 +1,5 @@
 import script from '../src/script.mjs';
+import { SGNL_USER_AGENT } from '@sgnl-actions/utils';
 
 describe('Box Revoke Session Script', () => {
   const mockContext = {
@@ -89,8 +90,10 @@ describe('Box Revoke Session Script', () => {
       };
 
       let capturedUrl;
+      let capturedOptions;
       global.fetch = async (url, options) => {
         capturedUrl = url;
+        capturedOptions = options;
         return {
           ok: true,
           json: async () => ({ message: 'Success' })
@@ -100,6 +103,7 @@ describe('Box Revoke Session Script', () => {
       await script.invoke(params, mockContext);
 
       expect(capturedUrl).toBe('https://custom.box.com/2.0/users/terminate_sessions');
+      expect(capturedOptions.headers['User-Agent']).toBe(SGNL_USER_AGENT);
     });
 
     test('should use ADDRESS environment variable when address param not provided', async () => {
@@ -116,8 +120,10 @@ describe('Box Revoke Session Script', () => {
       };
 
       let capturedUrl;
+      let capturedOptions;
       global.fetch = async (url, options) => {
         capturedUrl = url;
+        capturedOptions = options;
         return {
           ok: true,
           json: async () => ({ message: 'Success' })
@@ -127,6 +133,7 @@ describe('Box Revoke Session Script', () => {
       await script.invoke(params, contextWithEnvAddress);
 
       expect(capturedUrl).toBe('https://env.box.com/2.0/users/terminate_sessions');
+      expect(capturedOptions.headers['User-Agent']).toBe(SGNL_USER_AGENT);
     });
   });
 

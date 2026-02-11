@@ -9,6 +9,11 @@
  */
 
 /**
+ * User-Agent header value for all SGNL CAEP Hub requests.
+ */
+const SGNL_USER_AGENT = 'SGNL-CAEP-Hub/2.0';
+
+/**
  * Get OAuth2 access token using client credentials flow
  * @param {Object} config - OAuth2 configuration
  * @param {string} config.tokenUrl - Token endpoint URL
@@ -39,7 +44,8 @@ async function getClientCredentialsToken(config) {
 
   const headers = {
     'Content-Type': 'application/x-www-form-urlencoded',
-    'Accept': 'application/json'
+    'Accept': 'application/json',
+    'User-Agent': SGNL_USER_AGENT
   };
 
   if (authStyle === 'InParams') {
@@ -157,6 +163,21 @@ function getBaseURL(params, context) {
   return address.endsWith('/') ? address.slice(0, -1) : address;
 }
 
+/**
+ * Create full headers object with Authorization and common headers
+ * @param {Object} context - Execution context with env and secrets
+ * @returns {Promise<Object>} Headers object with Authorization, Accept, Content-Type
+ */
+async function createAuthHeaders(context) {
+  const authHeader = await getAuthorizationHeader(context);
+  return {
+    'Authorization': authHeader,
+    'Accept': 'application/json',
+    'Content-Type': 'application/json',
+    'User-Agent': SGNL_USER_AGENT
+  };
+}
+
 class RetryableError extends Error {
   constructor(message) {
     super(message);
@@ -187,7 +208,7 @@ function validateInputs(params) {
   }
 }
 
-async function terminateSessions(userId, userLogin, baseUrl, authHeader) {
+async function terminateSessions(userId, userLogin, baseUrl, headers) {
   const url = `${baseUrl}/2.0/users/terminate_sessions`;
 
   const requestBody = {
@@ -197,10 +218,7 @@ async function terminateSessions(userId, userLogin, baseUrl, authHeader) {
 
   const response = await fetch(url, {
     method: 'POST',
-    headers: {
-      'Authorization': authHeader,
-      'Content-Type': 'application/json'
-    },
+    headers,
     body: JSON.stringify(requestBody)
   });
 
@@ -276,11 +294,11 @@ var script = {
       const baseUrl = getBaseURL(params, context);
 
       // Get authorization header using utils
-      const authHeader = await getAuthorizationHeader(context);
+     const headers = await createAuthHeaders(context);
 
       // Terminate all sessions for the user
       console.log(`Terminating sessions for user: ${userId}`);
-      const terminateResult = await terminateSessions(userId, userLogin, baseUrl, authHeader);
+      const terminateResult = await terminateSessions(userId, userLogin, baseUrl, headers);
 
       const result = {
         userId,

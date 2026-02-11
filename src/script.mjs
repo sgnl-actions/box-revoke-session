@@ -1,4 +1,4 @@
-import { getAuthorizationHeader, getBaseURL} from '@sgnl-actions/utils';
+import { createAuthHeaders, getBaseURL} from '@sgnl-actions/utils';
 
 class RetryableError extends Error {
   constructor(message) {
@@ -30,7 +30,7 @@ function validateInputs(params) {
   }
 }
 
-async function terminateSessions(userId, userLogin, baseUrl, authHeader) {
+async function terminateSessions(userId, userLogin, baseUrl, headers) {
   const url = `${baseUrl}/2.0/users/terminate_sessions`;
 
   const requestBody = {
@@ -40,10 +40,7 @@ async function terminateSessions(userId, userLogin, baseUrl, authHeader) {
 
   const response = await fetch(url, {
     method: 'POST',
-    headers: {
-      'Authorization': authHeader,
-      'Content-Type': 'application/json'
-    },
+    headers,
     body: JSON.stringify(requestBody)
   });
 
@@ -119,11 +116,11 @@ export default {
       const baseUrl = getBaseURL(params, context);
 
       // Get authorization header using utils
-      const authHeader = await getAuthorizationHeader(context);
+     const headers = await createAuthHeaders(context);
 
       // Terminate all sessions for the user
       console.log(`Terminating sessions for user: ${userId}`);
-      const terminateResult = await terminateSessions(userId, userLogin, baseUrl, authHeader);
+      const terminateResult = await terminateSessions(userId, userLogin, baseUrl, headers);
 
       const result = {
         userId,
