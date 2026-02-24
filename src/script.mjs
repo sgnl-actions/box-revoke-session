@@ -1,4 +1,4 @@
-import { createAuthHeaders, getBaseURL } from '@sgnl-actions/utils';
+import { createHeaders, getBaseURL } from '@sgnl-actions/utils';
 
 class RetryableError extends Error {
   constructor(message) {
@@ -116,7 +116,7 @@ export default {
       const baseUrl = getBaseURL(params, context);
 
       // Get authorization header using utils
-      const headers = await createAuthHeaders(context);
+      const headers = await createHeaders(context);
 
       // Terminate all sessions for the user
       console.log(`Terminating sessions for user: ${userId}`);
