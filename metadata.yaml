@@ -81,7 +81,6 @@ environment:
   ADDRESS:
     type: text
     description: Box API base URL
-    default: "https://api.box.com"
 
   OAUTH2_CLIENT_CREDENTIALS_CLIENT_ID:
     type: text
